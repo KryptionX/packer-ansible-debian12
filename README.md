@@ -58,3 +58,21 @@ packer build -var-file=prox.pkrvars.hcl proxmox.pkr.hcl
 #### The `config.fish.j2` file is a Jinja2 template for the Fish shell configuration file. It sets up various aliases and other configurations.
 
 #### The `motd.txt` file is custom ASCII art that will show on every SSH login. Please customise it before deploying or remove it as desired. 
+
+```
+   ____                                        
+  |  _ \ _ __ _____  ___ __ ___   _____  __    
+  | |_) | '__/ _ \ \/ / '_ ` _ \ / _ \ \/ /    
+  |  __/| | | (_) >  <| | | | | | (_) >  <     
+  |_|   |_|  \___/_/\_\_| |_| |_|\___/_/\_\    
+              | |__  _   _                     
+              | '_ \| | | |                    
+              | |_) | |_| |                    
+              |_.__/ \__, |                    
+  _  __              |___/  _            __  __
+ | |/ /_ __ _   _ _ __ | |_(_) ___  _ __ \ \/ /
+ | ' /| '__| | | | '_ \| __| |/ _ \| '_ \ \  / 
+ | . \| |  | |_| | |_) | |_| | (_) | | | |/  \ 
+ |_|\_\_|   \__, | .__/ \__|_|\___/|_| |_/_/\_\
+            |___/|_|                           
+```
