@@ -1,0 +1,258 @@
+---
+# playbook.yml
+- name: "Provision Image"
+  hosts: default
+  become: true
+  vars:
+    username: "{{ username }}"
+  tasks:
+### Initial: Wait for cloud-init to finish
+    - name: Wait for cloud init to complete
+      wait_for:
+        path: /var/lib/cloud/instance/boot-finished
+        state: present
+      become: true
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        force_apt_get: yes
+      retries: 15
+      delay: 5
+### Docker
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - gpg
+          - lsb-release
+        state: present
+        update_cache: true
+      retries: 5
+      delay: 10
+    - name: Add Docker's official GPG key
+      shell:
+        cmd: curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    - name: Set up the Docker stable repository
+      shell:
+        cmd: echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    - name: Update apt cache (again)
+      apt:
+        update_cache: true
+    - name: Install Docker Engine
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+    - name: Enable service Docker
+      systemd:
+        name: docker
+        enabled: yes
+### Hashicorp Repo
+    - name: Download HashiCorp GPG apt Key
+      get_url:
+        url: https://apt.releases.hashicorp.com/gpg
+        dest: /usr/local/src/hashicorp.gpg
+    - name: Add HashiCorp GPG apt Key
+      apt_key:
+        file: /usr/local/src/hashicorp.gpg
+        state: present
+### Generic Applications
+    - name: Install Applications
+      apt:
+        name:
+          - acpid
+          - cifs-utils
+          - dkms
+          - fish
+          - fonts-firacode
+          - fuse
+          - git
+          - gnupg2
+          - htop
+          - iproute2
+          - iputils-ping
+          - make
+          - net-tools
+          - netcat-openbsd
+          - nfs-common
+          - procps
+          - progress
+          - rsync
+          - screen
+          - software-properties-common
+          - sudo
+          - tree
+          - unzip
+          - wget
+          - zip
+        state: present
+        update_cache: true
+### Starship
+    - name: Download unarchive and move Starship
+      unarchive:
+        src: https://github.com/starship/starship/releases/latest/download/starship-x86_64-unknown-linux-gnu.tar.gz
+        dest: /usr/local/bin
+        remote_src: yes
+        mode: 0755
+### User creation, setup
+    - name: Add user '{{ username }}' with a specific uid and group of sudo and docker
+      user:
+        name: "{{ username }}"
+        uid: 1000
+        groups: sudo,docker
+        state: present
+        shell: /usr/bin/fish
+    - name: Copy file with owner and permissions
+      copy:
+        src: ./files/scripts/user-files/motd.txt
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: "0644"
+    - name: Copy sshd_pam file with owner and permissions
+      copy:
+        src: ./files/sshd_pam
+        dest: /etc/pam.d/sshd
+        owner: root
+        group: root
+        mode: "0644"
+### SSH Config
+    - name: Ensure .ssh directory exists
+      file:
+        path: /home/{{ username }}/.ssh
+        state: directory
+        mode: "0700"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+    - name: Upload public key
+      copy:
+        src: ./files/pubkey
+        dest: /home/{{ username }}/.ssh/authorized_keys
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0600"
+### Init Permissions
+    - name: Create directories for user '{{ username }}'
+      file:
+        path: "/home/{{ username }}/{{ item }}"
+        state: directory
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+      loop:
+        - .config/fish/functions
+        - .config/fish/completions
+        - .config/fish/conf.d
+        - .ssh
+    - name: Create files for user '{{ username }}'
+      copy:
+        dest: "/home/{{ username }}/{{ item }}"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0644"
+        content: ""
+      loop:
+        - .config/fish/config.fish
+        - .config/fish/functions/fish_greeting.fish
+        - .ssh/environment
+    - name: Set sudoers for user '{{ username }}'
+      blockinfile:
+        path: /etc/sudoers.d/{{ username }}
+        create: yes
+        block: |
+          {{ username }} ALL=(ALL) NOPASSWD: ALL
+          Defaults env_keep += "HOME"
+          Defaults env_keep += "USER"
+        mode: "0440"
+        validate: "visudo -cf %s"
+    - name: Ensure ownership of home directory
+      file:
+        path: "/home/{{ username }}"
+        state: directory
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        recurse: yes
+### Fish Setup
+    - name: Copy file with user '{{ username }}' permissions for fish config setup
+      template:
+        src: ./files/scripts/user-files/config.fish.j2
+        dest: /home/{{ username }}/.config/fish/config.fish
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+    - name: Copy file with user '{{ username }}' permissions for fish_greeting setup
+      copy:
+        src: ./files/scripts/user-files/fish_greeting.fish
+        dest: /home/{{ username }}/.config/fish/fish_greeting.fish
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+    - name: Use get_url to download file with user '{{ username }}' permissions for fisher functions
+      get_url:
+        url: https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish
+        dest: /home/{{ username }}/.config/fish/functions/fisher.fish
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+    - name: Use get_url to download file with user '{{ username }}' permissions for fisher completions
+      get_url:
+        url: https://raw.githubusercontent.com/jorgebucaran/fisher/main/completions/fisher.fish
+        dest: /home/{{ username }}/.config/fish/completions/fisher.fish
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+    - name: Use get_url to download file with user '{{ username }}' permissions for __ssh_agent_start.fish functions
+      get_url:
+        url: https://raw.githubusercontent.com/danhper/fish-ssh-agent/master/functions/__ssh_agent_start.fish
+        dest: /home/{{ username }}/.config/fish/functions/__ssh_agent_start.fish
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+    - name: Use get_url to download file with user '{{ username }}' permissions for __ssh_agent_is_started.fish function
+      get_url:
+        url: https://raw.githubusercontent.com/danhper/fish-ssh-agent/master/functions/__ssh_agent_is_started.fish
+        dest: /home/{{ username }}/.config/fish/functions/__ssh_agent_is_started.fish
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+    - name: Use get_url to download file with user '{{ username }}' permissions for fish-ssh-agents conf.d
+      get_url:
+        url: https://raw.githubusercontent.com/danhper/fish-ssh-agent/master/conf.d/fish-ssh-agent.fish
+        dest: /home/{{ username }}/.config/fish/conf.d/fish-ssh-agent.fish
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+### Final '{{ username }}' permission check, sshd config, and OS cleanup
+    - name: Final permission pass
+      file:
+        path: "/home/{{ username }}"
+        state: directory
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: "0755"
+        recurse: yes
+    - name: Enable unattended upgrades package
+      apt:
+        name: unattended-upgrades
+        state: present
+    - name: Start and enable unattended-upgrades service
+      systemd:
+        name: unattended-upgrades
+        state: started
+        enabled: yes
+    - name: Copy sshd_config_final file with owner and permissions
+      copy:
+        src: ./files/sshd_config_final
+        dest: /etc/ssh/sshd_config
+        owner: root
+        group: root
+        mode: "0644"
+    - name: Run a script to cleanup OS
+      script: ./files/scripts/cleanup.sh
