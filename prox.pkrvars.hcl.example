@@ -1,0 +1,77 @@
+variable "node" {
+  description = "Node name"
+  type        = string
+  default     = "example-node"
+}
+
+variable "proxmox_url" {
+  description = "Proxmox URL"
+  type        = string
+  default     = "192.168.1.1"
+}
+
+variable "username" {
+  description = "Proxmox Username"
+  type        = string
+  default     = "user@pam!user"
+}
+
+variable "token" {
+  description = "Proxmox Token"
+  type        = string
+  default     = "12345678-1234-1234-1234-123456789012"
+}
+
+variable "clone_vm_id" {
+  description = "ID of the VM image to be cloned"
+  type        = number
+  default     = 1000
+}
+
+variable "vm_id" {
+  description = "ID of the finished VM template"
+  type        = number
+  default     = 1001
+}
+
+variable "cipassword" {
+  description = "Cloud-Init user Password"
+  type        = string
+  default     = "example-password"
+}
+
+variable "ciuser" {
+  description = "Cloud-Init User"
+  type        = string
+  default     = "example-user"
+}
+
+variable "disk_stor" {
+  description = "Proxmox Disk Storage volume"
+  type        = string
+  default     = "local"
+}
+
+variable "ipconfig" {
+  description = "Cloud-Init IP Configuration"
+  type        = string
+  default     = "gw=192.168.1.1,ip=192.168.1.100/24"
+}
+
+variable "ssh_password" {
+  description = "SSH Password"
+  type        = string
+  default     = ""
+}
+
+variable "ssh_username" {
+  description = "SSH Username"
+  type        = string
+  default     = "root"
+}
+
+variable "template_name" {
+  description = "Name of finished proxmox template"
+  type        = string
+  default     = "example-template"
+}
