@@ -56,3 +56,5 @@ packer build -var-file=prox.pkrvars.hcl proxmox.pkr.hcl
 #### The `fish_greeting.fish` file is used to display the message of the day (MOTD) when opening a new Fish shell.
 
 #### The `config.fish.j2` file is a Jinja2 template for the Fish shell configuration file. It sets up various aliases and other configurations.
+
+#### The `motd.txt` file is custom ASCII art that will show on every SSH login. Please customise it before deploying or remove it as desired. 
