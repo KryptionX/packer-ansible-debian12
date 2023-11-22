@@ -1,0 +1,17 @@
+# Abbr
+abbr -a -- .down 'docker compose down'
+abbr -a -- .dsp 'docker system prune -af'
+abbr -a -- .list 'apt list --upgradable'
+abbr -a -- .pull 'docker compose pull'
+abbr -a -- .stop 'docker stop (docker ps -a -q)'
+abbr -a -- .up 'docker compose up -d'
+abbr -a -- .update 'sudo apt update'
+abbr -a -- .upgrade 'sudo apt upgrade -y'
+abbr -a -- dps 'docker ps -a'
+abbr -a -- l 'ls -lah'
+
+set -g -x fish_greeting
+
+starship init fish | source
+
+test -e /home/{{ username }}/.iterm2_shell_integration.fish ; and source /home/{{ username }}/.iterm2_shell_integration.fish
